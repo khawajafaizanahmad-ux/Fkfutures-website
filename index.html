@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="d">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FKFutures — The strategy, the math and the execution system</title>
+<meta name="description" content="A simple strategy tested across 3,000 trades, unique risk management, and an execution system that takes care of everything else.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* ===== palettes — pick with <html data-theme="a|b|c"> ===== */
+:root{ /* A · Sakura: indigo ink, blossom pink, sky tint */
+  --bg:#ffffff;--ink:#1B1F3B;--text:#1B1F3B;--muted:#5B6180;--card:#ffffff;--card-ink:#1B1F3B;--card-muted:#5B6180;--on-ink:#ffffff;--acc:#FF4F8B;--acc-ink:#ffffff;--tint:#E6EEFF;--tint2:#FFE4EE;
+  --up:#1F8F55;--up-fill:#5BC98D;--dn:#D93A4F;--dn-fill:#F77F8E;--sup:rgba(217,58,79,.18);--dem:rgba(31,143,85,.18);--cross:#B9C1DD;--axis:#8A91B0;--live:#D93A4F;
+  --hl-bg:#FFE4EE;--hl:#E6336F;--brown:#AB946A;--nav-h:72px;--pad:clamp(28px,4vw,56px);--line:2px solid var(--ink)}
+html[data-theme=b]{ /* B · Shonen: black ink, vermilion, sun-yellow tint */
+  --bg:#FFFDF7;--ink:#111111;--text:#111111;--muted:#5a5a5a;--card:#FFFDF7;--card-ink:#111111;--card-muted:#5a5a5a;--on-ink:#FFFDF7;--acc:#FF3B30;--acc-ink:#ffffff;--tint:#FFE9A8;--tint2:#FFD9D6;
+  --up:#1E8E4B;--up-fill:#58C57F;--dn:#C92C2C;--dn-fill:#F07070;--sup:rgba(201,44,44,.18);--dem:rgba(30,142,75,.18);--cross:#C9C2B0;--axis:#8a8070;--live:#C92C2C;
+  --hl-bg:#FFE9A8;--hl:#C8102E}
+html[data-theme=c]{ /* C · Unit-01: deep violet ink, violet accent, acid-green highlight */
+  --bg:#ffffff;--ink:#2A1A4A;--text:#2A1A4A;--muted:#6B5E8A;--card:#ffffff;--card-ink:#2A1A4A;--card-muted:#6B5E8A;--on-ink:#ffffff;--acc:#7C3AED;--acc-ink:#ffffff;--tint:#EDE4FF;--tint2:#E4FFC8;
+  --up:#15934A;--up-fill:#4FCB84;--dn:#D62E4C;--dn-fill:#F57590;--sup:rgba(214,46,76,.18);--dem:rgba(21,147,74,.18);--cross:#C8BFE0;--axis:#8F84AD;--live:#D62E4C;
+  --hl-bg:#D9FF7A;--hl:#2A1A4A}
+html[data-theme=d]{ /* D · Santioni paper: #E8E6DE paper, #F4F4F4 boxes, #121212 ink, #373737 grey, #552021 maroon, #AB946A tan, #C82924 red */
+  --bg:#E8E6DE;--ink:#121212;--text:#121212;--muted:#4A4A4A;--card:#F4F4F4;--card-ink:#121212;--card-muted:#555555;--on-ink:#F4F4F4;--acc:#552021;--acc-ink:#F4F4F4;--tint:#D2D0C8;--tint2:#DDDAD1;
+  --up:#7E6A42;--up-fill:#AB946A;--dn:#3E1516;--dn-fill:#552021;--sup:rgba(85,32,33,.18);--dem:rgba(171,148,106,.34);--cross:#8A877F;--axis:#4A4A4A;--live:#C82924;
+  --hl-bg:#AB946A;--hl:#121212;--brown:#AB946A}
+html[data-theme=e]{ /* E · Santioni maroon: #572122 ground, #F4F4F4 boxes, #121212 lines, #AB946A tan details, #C82924 red */
+  --bg:#572122;--ink:#121212;--text:#F4F4F4;--muted:#DCCFC4;--card:#F4F4F4;--card-ink:#121212;--card-muted:#555555;--on-ink:#F4F4F4;--acc:#AB946A;--acc-ink:#121212;--tint:#3E1516;--tint2:#E8E6DE;
+  --up:#AB946A;--up-fill:#AB946A;--dn:#121212;--dn-fill:#121212;--sup:rgba(18,18,18,.3);--dem:rgba(171,148,106,.35);--cross:rgba(244,244,244,.45);--axis:#DCCFC4;--live:#C82924;
+  --hl-bg:#AB946A;--hl:#121212}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+button{font:inherit}
+
+/* ---------- pager: one scroll = one page ---------- */
+#pager{position:relative;height:100vh;height:100dvh;overflow-y:auto;scroll-snap-type:y mandatory;overscroll-behavior:none;scroll-behavior:smooth;scrollbar-width:none}
+#pager::-webkit-scrollbar{display:none}
+.page{position:relative;height:100vh;height:100dvh;scroll-snap-align:start;scroll-snap-stop:always;display:flex;flex-direction:column;padding:calc(var(--nav-h) + 8px) var(--pad) 20px;overflow:hidden}
+.inner{flex:1;min-height:0;display:flex;flex-direction:column;padding:12px 10px 14px;scrollbar-width:none}
+.inner::-webkit-scrollbar,.sc::-webkit-scrollbar{display:none}
+
+/* ---------- nav ---------- */
+.nav{position:fixed;top:0;left:0;right:0;z-index:50;height:var(--nav-h);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 var(--pad);background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.brand{font-weight:900;font-size:22px;letter-spacing:-.03em;text-decoration:none;border:var(--line);border-radius:10px;padding:6px 12px;background:var(--card);color:var(--card-ink);box-shadow:4px 4px 0 var(--tint);white-space:nowrap;cursor:pointer}
+.brand span{color:var(--acc)}
+.nav-actions{display:flex;gap:10px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:700;font-size:14px;line-height:1;padding:12px 16px;border:var(--line);border-radius:10px;background:var(--card);color:var(--card-ink);text-decoration:none;cursor:pointer;white-space:nowrap;transition:transform .15s,box-shadow .15s,background .15s,color .15s}
+.btn:hover{transform:translate(-2px,-2px);box-shadow:4px 4px 0 var(--ink)}
+.btn:active{transform:none;box-shadow:none}
+.btn.dark{background:var(--ink);color:var(--on-ink)}
+.btn.dark:hover{background:var(--acc);color:var(--acc-ink)}
+.btn.acc{background:var(--acc);color:var(--acc-ink)}
+.btn.tan{background:var(--brown);color:#121212}
+.btn.tan:hover{background:var(--ink);color:var(--on-ink)}
+.btn:disabled{opacity:.6;cursor:wait;transform:none;box-shadow:none}
+
+/* ---------- shared ---------- */
+h2.t{font-size:clamp(24px,3vw,42px);font-weight:900;letter-spacing:-.035em;line-height:1.08}
+.acc{color:var(--acc)}
+.hl{color:var(--hl);background:var(--hl-bg);padding:0 .18em;border-radius:6px;font-weight:900;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.sub{color:var(--muted);font-weight:600;font-size:clamp(14px,1.3vw,17px);line-height:1.45}
+.card{border:var(--line);border-radius:14px;background:var(--card);color:var(--card-ink);--muted:var(--card-muted)}
+.rise{opacity:0;transform:translateY(16px);transition:opacity .55s ease,transform .6s cubic-bezier(.2,1.25,.3,1);transition-delay:calc(var(--i,0)*90ms)}
+.page.on .rise{opacity:1;transform:none}
+
+/* ---------- page 2: offers ---------- */
+.grid2{position:relative;z-index:0;flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);gap:clamp(18px,2.6vw,40px);margin-top:clamp(4px,1vh,12px)}
+.vcol{display:flex;flex-direction:column;gap:16px;min-height:0}
+.vcol h2.t{font-size:clamp(22px,2.4vw,36px);margin-bottom:2px}
+.dbar{justify-content:flex-start;gap:12px;padding:14px 16px;font-size:15px;white-space:normal;text-align:left}
+.dbar svg{flex:none;width:22px;height:22px}
+.video{position:relative;flex:0 1 auto;min-height:0;aspect-ratio:16/9;overflow:hidden;background:var(--ink);border-radius:16px;box-shadow:7px 7px 0 var(--tint)}
+.video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.video .ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--on-ink);font-weight:800;text-align:center;padding:16px}
+.video .ph .play{width:66px;height:66px;border-radius:50%;background:var(--acc);border:2px solid var(--on-ink);display:grid;place-items:center;box-shadow:4px 4px 0 var(--on-ink)}
+.video .ph small{display:block;font-weight:600;opacity:.7;margin-top:2px}
+.plans{display:grid;grid-template-columns:1fr 1fr;min-height:0}
+.plan{position:relative;z-index:0;display:flex;flex-direction:column;min-height:0;padding:0 clamp(10px,1.4vw,20px)}
+.plan + .plan{border-left:2px solid var(--ink)}
+.plan .head{padding:12px 14px;border-radius:12px}
+.plan .head .name{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.plan .head .price{font-size:clamp(28px,2.6vw,42px);font-weight:900;letter-spacing:-.04em;line-height:1.05;margin-top:2px}
+.plan .head .note{margin-top:6px;font-size:12px;font-weight:700;color:var(--muted);line-height:1.35}
+.plan .head .note b{color:var(--card-ink)}
+.plan ul{list-style:none;flex:1;min-height:0;overflow:auto;scrollbar-width:none;margin:12px 0}
+.plan li{display:flex;align-items:flex-start;gap:9px;padding:5px 0;font-size:14px;font-weight:600;line-height:1.3}
+.plan li.all{font-weight:800}
+.plan li .ck{flex:none;width:18px;height:18px;margin-top:1px;border:2px solid var(--ink);border-radius:5px;background:var(--card);display:grid;place-items:center}
+.plan li .ck svg{width:11px;height:11px}
+.plan .btn{width:100%;margin-top:auto}
+
+/* ---------- page 3: hall of fame ---------- */
+.hof-grid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:minmax(0,1fr);gap:clamp(14px,1.8vw,24px);margin-top:clamp(12px,2vh,22px);padding:10px 12px 12px}
+.hof-card{position:relative;display:flex;flex-direction:column;min-height:0;overflow:hidden;box-shadow:10px 10px 0 var(--tint);transition:transform .15s,box-shadow .15s}
+.hof-card:nth-child(even){box-shadow:-10px 10px 0 var(--tint)}
+.hof-card:hover{transform:translate(-3px,-3px);box-shadow:6px 6px 0 var(--ink)}
+.hof-card .tag{position:absolute;z-index:2;top:10px;left:10px;font-size:11px;font-weight:800;border:2px solid var(--ink);border-radius:999px;padding:3px 9px;background:var(--card);color:var(--card-ink)}
+.hof-card .tag b{color:var(--acc);margin-right:3px}
+.hof-card .media{position:relative;flex:1;min-height:0;background:var(--tint2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:12px;font-weight:700;text-align:center;padding:14px}
+.hof-card .media img,.hof-card .media iframe,.hof-card .media video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border:0}
+.hof-card .media video{background:#000}
+.hof-card .fs{position:absolute;z-index:3;right:8px;top:8px;width:30px;height:30px;border:2px solid var(--ink);border-radius:8px;background:var(--card);color:var(--card-ink);font-size:15px;font-weight:900;line-height:1;cursor:pointer;display:grid;place-items:center}
+.hof-card .fs:hover{background:var(--ink);color:var(--on-ink)}
+.hof-card .media:fullscreen{background:#000}
+.hof-card .media:fullscreen iframe,.hof-card .media:fullscreen video{object-fit:contain}
+.hof-card .media:fullscreen .fs{display:none}
+.hof-card .media svg{width:40px;height:40px;color:var(--ink);--ic1:var(--acc);--ic2:var(--tint);--ic3:var(--ink);--ic4:var(--up);--ic-fg:var(--card)}
+.hof-card .media .q{color:var(--ink);font-size:clamp(13px,1vw,15px);font-weight:700;line-height:1.35;text-align:left}
+.hof-card .cap{padding:10px 12px;border-top:var(--line);font-size:13px;font-weight:700;background:var(--card)}
+
+/* ---------- page 4: form ---------- */
+.apply .inner{display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);gap:clamp(20px,4vw,64px);align-content:center;align-items:center}
+.why{margin-top:18px;padding:16px 18px;font-size:14px;line-height:1.5;box-shadow:8px 8px 0 var(--tint)}
+.why b{display:block;margin-bottom:4px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--acc)}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:clamp(16px,2.4vw,28px);border-radius:16px;box-shadow:8px 8px 0 var(--ink)}
+.field{display:flex;flex-direction:column;gap:6px}
+.field.full,.form .btn,.fine{grid-column:1/-1}
+.field label{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.field input,.field select{width:100%;padding:12px 14px;font:inherit;font-weight:600;font-size:15px;color:var(--card-ink);background:var(--card);border:var(--line);border-radius:10px;outline:0;appearance:none;-webkit-appearance:none}
+.field select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%23555' stroke-width='2'/></svg>");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px}
+.field input:focus,.field select:focus{box-shadow:0 0 0 4px var(--tint)}
+.field .help{font-size:12px;color:var(--muted);line-height:1.4}
+.fine{font-size:12px;color:var(--muted);text-align:center}
+
+/* ---------- page 5: about + legal ---------- */
+.legal .inner{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);grid-template-rows:minmax(0,1fr) auto;gap:clamp(16px,2.4vh,28px) clamp(20px,4vw,56px)}
+.about{padding:clamp(16px,2.2vw,26px);box-shadow:8px 8px 0 var(--tint);display:flex;flex-direction:column;gap:12px;min-height:0;overflow:auto;scrollbar-width:none}
+.about .who{display:flex;align-items:center;gap:12px}
+.about .avatar{width:58px;height:58px;border-radius:50%;background:var(--ink);color:var(--on-ink);border:var(--line);display:grid;place-items:center;font-weight:900;font-size:20px;overflow:hidden;flex:none}
+.about .avatar img{width:100%;height:100%;object-fit:cover}
+.about .who b{display:block;font-size:17px;letter-spacing:-.02em}
+.about .who span{font-size:13px;color:var(--muted);font-weight:600}
+.about p{font-size:14px;line-height:1.55;font-weight:500}
+.about .stats{display:flex;gap:8px;flex-wrap:wrap}
+.about .stats div{border:2px solid var(--ink);border-radius:999px;padding:4px 10px;font-size:12px;font-weight:800}
+.legal-text{min-height:0;overflow:auto;scrollbar-width:none;padding-right:6px;font-size:13px;line-height:1.55;color:var(--text);opacity:.85;font-weight:500}
+.legal-text h3{margin:14px 0 6px;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.legal-text h3:first-child{margin-top:0}
+.legal-text p+p{margin-top:8px}
+footer{grid-column:1/-1;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 16px;padding-top:14px;border-top:var(--line);font-size:12px;font-weight:700;color:var(--muted)}
+footer nav{display:flex;gap:16px}
+footer a{text-decoration:none}
+footer a:hover{color:var(--acc)}
+
+/* ---------- page dots + palette switcher ---------- */
+.dots{position:fixed;right:10px;top:50%;z-index:50;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px}
+.dots button{width:12px;height:12px;padding:0;border-radius:50%;border:2px solid var(--ink);background:var(--card);cursor:pointer;transition:background .2s,transform .2s}
+.dots button.on{background:var(--acc);transform:scale(1.3)}
+.themes{position:fixed;left:14px;bottom:14px;z-index:60;display:flex;gap:6px;padding:6px;border:var(--line);border-radius:999px;background:var(--card)}
+.themes button{padding:6px 10px;border:0;border-radius:999px;background:transparent;font-weight:800;font-size:12px;cursor:pointer;color:var(--card-ink)}
+.themes button.on{background:var(--ink);color:var(--on-ink)}
+
+/* ---------- motion ---------- */
+@keyframes pop{0%{opacity:0;transform:translateY(26px) scale(.86) rotate(-3deg)}60%{opacity:1}100%{opacity:1;transform:none}}
+@keyframes sweep{to{transform:scaleX(1)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes nudge{0%,100%{transform:rotate(45deg) translate(0,0);opacity:1}50%{transform:rotate(45deg) translate(4px,4px);opacity:.35}}
+@keyframes blink{50%{opacity:.2}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-delay:0ms!important;transition:none!important}.rise{opacity:1;transform:none}}
+
+/* ---------- responsive ---------- */
+@media (max-width:900px),(max-height:760px){.inner{overflow:auto}}
+@media (max-width:900px){
+  .grid2{grid-template-columns:1fr}
+  .video{flex:none}
+  .hof-grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:minmax(170px,auto)}
+  .apply .inner,.legal .inner{grid-template-columns:1fr;grid-template-rows:none;align-items:start;align-content:start}
+  .about,.legal-text{overflow:visible}
+  .form{grid-template-columns:1fr}
+  .dots{display:none}
+}
+@media (max-width:640px){
+  :root{--nav-h:64px;--pad:16px}
+  .brand{font-size:18px;padding:5px 9px}
+  .btn{padding:9px 11px;font-size:12px}
+  .nav-actions{overflow-x:auto;scrollbar-width:none;max-width:72vw}
+  .nav-actions::-webkit-scrollbar{display:none}
+  .plans{grid-template-columns:1fr}
+  .plan + .plan{border-left:0;border-top:2px solid var(--ink);padding-top:14px;margin-top:8px}
+  .hof-grid{padding:10px 10px 12px}
+  .themes{left:8px;bottom:8px}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="brand" href="#p2" data-go="0">FK<span>Futures</span></a>
+  <div class="nav-actions">
+    <a class="btn" href="#p4" data-go="2" data-focus="#f-name">1 on 1 Mentorship</a>
+    <a class="btn tan" data-link="discord">Join Discord</a>
+    <a class="btn dark" data-link="whop-whole">Get the Strategy + Tools</a>
+  </div>
+</nav>
+<div class="dots" id="dots" aria-label="Pages"></div>
+
+
+<main id="pager">
+
+  <!-- ===== PAGE 1: video + the two offers ===== -->
+  <section class="page offers" id="p2">
+    <div class="inner sc">
+      <div class="grid2">
+        <div class="vcol">
+          <h2 class="t rise" style="--i:0">Simple strategy. 3K trades tested. Unique risk management. One execution system.</h2>
+          <div class="card video rise" id="video" style="--i:1">
+            <div class="ph"><div class="play"><svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg></div>Watch the video<small>Add your video link in CONFIG.VIDEO_EMBED_URL</small></div>
+          </div>
+          <a class="btn tan dbar rise" data-link="discord" style="--i:2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg>Doubts? Join the free Discord.</a>
+        </div>
+        <div class="plans">
+          <div class="plan rise" style="--i:2">
+            <div class="card head"><div class="name">The Whole Thing</div><div class="price">$249</div></div>
+            <ul class="sc">
+              <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M4 12l5 5L20 6"/></svg></span>Strategy videos — the full setup, start to finish</li>
+              <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M4 12l5 5L20 6"/></svg></span>Execution System app</li>
+              <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M4 12l5 5L20 6"/></svg></span>Premium Discord — trades posted in real time</li>
+              <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M4 12l5 5L20 6"/></svg></span>Trading journal</li>
+              <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M4 12l5 5L20 6"/></svg></span>Trade copier</li>
+              <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M4 12l5 5L20 6"/></svg></span>Prop firm sync</li>
+              <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M4 12l5 5L20 6"/></svg></span>Monte Carlo simulator</li>
+            </ul>
+            <a class="btn dark" data-link="whop-whole">Get the Strategy + Tools</a>
+          </div>
+          <div class="plan rise" style="--i:3">
+            <div class="card head"><div class="name">1 on 1 Mentorship</div><div class="price">$497</div><div class="note">First 10 only — <b>6 of 10 filled</b>. Then it goes to $1,000.</div></div>
+            <ul class="sc">
+              <li class="all"><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M4 12l5 5L20 6"/></svg></span>Everything in The Whole Thing</li>
+              <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M4 12l5 5L20 6"/></svg></span>Execution System app</li>
+              <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M4 12l5 5L20 6"/></svg></span>Premium Discord</li>
+              <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M4 12l5 5L20 6"/></svg></span>Weekly 1‑on‑1 meetings</li>
+              <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M4 12l5 5L20 6"/></svg></span>All‑time text access</li>
+              <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M4 12l5 5L20 6"/></svg></span>Daily check‑ins</li>
+              <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M4 12l5 5L20 6"/></svg></span>Daily trade reviews</li>
+              <li><span class="ck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M4 12l5 5L20 6"/></svg></span>Beginner → professional training</li>
+            </ul>
+            <a class="btn dark" href="#p4" data-go="2" data-focus="#f-name">Apply for 1 on 1</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== PAGE 3: hall of fame ===== -->
+  <section class="page hof" id="p3">
+    <div class="inner sc">
+      <h2 class="t rise" style="--i:0">Hall of <span class="acc">Fame</span></h2>
+      <p class="sub rise" style="--i:1">Payout proofs, student interviews and clips from inside the Discord.</p>
+      <div class="hof-grid" id="hofGrid"></div>
+    </div>
+  </section>
+
+  <!-- ===== PAGE 4: mentorship application → Whop checkout ===== -->
+  <section class="page apply" id="p4">
+    <div class="inner sc">
+      <div>
+        <h2 class="t rise" style="--i:0">Apply for <span class="acc">1‑on‑1</span> mentorship.</h2>
+        <p class="sub rise" style="--i:1;margin-top:10px">Sixty seconds. When you're done you go straight to checkout.</p>
+        <div class="card why rise" style="--i:2"><b>Why I ask about capital</b>You can't make $10K with $50 in your account — the math doesn't exist. Your starting capital decides whether you should be on a prop‑firm evaluation, a funded account or your own money, and how much size the plan can carry. Give me the real number and I'll build the plan around it.</div>
+      </div>
+      <form class="card form rise" id="applyForm" style="--i:1" novalidate name="mentorship-applications" method="POST" data-netlify="true" netlify-honeypot="bot-field"><input type="hidden" name="form-name" value="mentorship-applications"><input type="hidden" name="offer" value=""><input type="hidden" name="source" value=""><p hidden><label>Leave empty <input name="bot-field"></label></p>
+        <div class="field"><label for="f-name">Name</label><input id="f-name" name="name" type="text" autocomplete="name" placeholder="Your name" required></div>
+        <div class="field"><label for="f-email">Email</label><input id="f-email" name="email" type="email" autocomplete="email" placeholder="you@email.com" required></div>
+        <div class="field"><label for="f-phone">Phone</label><input id="f-phone" name="phone" type="tel" autocomplete="tel" placeholder="+1 (___) ___‑____" required></div>
+        <div class="field"><label for="f-exp">Experience in trading</label>
+          <select id="f-exp" name="experience" required>
+            <option value="" disabled selected>Choose one</option>
+            <option>Brand new — never placed a trade</option>
+            <option>Under 1 year</option>
+            <option>1–3 years, not consistent yet</option>
+            <option>3+ years / already funded</option>
+          </select></div>
+        <div class="field full"><label for="f-cap">How much money do you have to put toward trading?</label>
+          <select id="f-cap" name="capital" required>
+            <option value="" disabled selected>Choose a range</option>
+            <option>Under $500</option>
+            <option>$500 – $2,000</option>
+            <option>$2,000 – $10,000</option>
+            <option>$10,000+</option>
+          </select>
+          <div class="help">Be honest — this is what the plan gets built around. Evals, funded accounts and a personal account each need a different number.</div></div>
+        <button class="btn acc" type="submit">Continue to checkout</button>
+        <div class="fine">Next step: the 1‑on‑1 mentorship checkout on Whop ($497 — first 10 only).</div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ===== PAGE 5: about + legal ===== -->
+  <section class="page legal" id="p5">
+    <div class="inner sc">
+      <div class="card about sc rise" style="--i:0">
+        <div class="who">
+          <div class="avatar">FK</div><!-- replace with <img src="you.jpg" alt="Faizan"> -->
+          <div><b>Faizan — the FK in FKFutures</b><span>MNQ futures · prop‑firm trader · software engineer</span></div>
+        </div>
+        <p>I trade MNQ (Micro Nasdaq) futures on the 1‑minute chart from 9:30 to 12:30 ET, across multiple prop‑firm accounts at the same time. The edge isn't a hero call. It's one setup, a fixed stop, a fixed target and a win rate around 60%, layered across thousands of trades — prop‑firm math, executed the same way every day, usually seven to eight trades a session.</p>
+        <p>I'm also a software engineer, which is why I hired a team of developers and traders to build an app that connects to your prop‑firm accounts and gives you the execution systems professional traders use: unique risk management, automatic brackets with stops and take‑profit levels, entries placed within a second, a tracker that keeps everything in one place, prop‑firm sync, a trade copier and a trading journal. It isn't a bot — you take the trade, the app executes it exactly as planned. That app, the strategy and the risk rules are what you get inside The Whole Thing.</p>
+        <div class="stats"><div>MNQ · 1‑min</div><div>09:30–12:30 ET</div><div>~60% win rate</div><div>3,000+ trades</div><div>7–8 trades a day</div><div>Multi‑account</div></div>
+      </div>
+      <div class="legal-text sc rise" style="--i:1">
+        <!-- Template language — have a lawyer review before launch. -->
+        <h3>Risk disclosure</h3>
+        <p>Trading futures, including Micro E‑mini Nasdaq‑100 (MNQ) contracts, involves a substantial risk of loss and is not suitable for everyone. Trading is a hard business. Most people who attempt it lose money, and you should only ever trade with money you can afford to lose. Leverage can work against you as fast as it works for you, and in a personal account you can lose more than your initial deposit.</p>
+        <h3>Education, not advice</h3>
+        <p>FKFutures provides educational content, software tools and a community. Nothing on this site, in the videos, in the Discord or in a mentorship call is personalized financial, investment or tax advice, and FKFutures is not a broker, exchange or registered investment adviser. You are responsible for every trade you take. Do your own research and consult a licensed professional before making financial decisions.</p>
+        <h3>Hypothetical and past performance</h3>
+        <p>Win rates, R‑multiples and backtest statistics shown here are based on historical and simulated results. Simulated results have inherent limitations: they are prepared with the benefit of hindsight, do not reflect real slippage, fees or liquidity, and no representation is being made that any account will or is likely to achieve results similar to those shown. Past performance is not indicative of future results.</p>
+        <h3>Prop firms and payouts</h3>
+        <p>Payout screenshots and testimonials in the Hall of Fame are real examples from specific people and specific accounts. They are not typical, they are not a promise, and your results will depend on your capital, your discipline, market conditions and the rules of the firm you trade with. Prop firms set their own evaluation rules, drawdown limits and payout policies, which can change at any time. FKFutures is not affiliated with Topstep, Lucid Trading, Whop or Discord.</p>
+        <h3>Software</h3>
+        <p>The Execution System is a tool that places and manages orders according to rules you configure. It does not guarantee profits, cannot prevent losses, and depends on your platform, your connection and your settings. Test everything in simulation first. You remain responsible for all orders placed through your accounts.</p>
+        <h3>Purchases</h3>
+        <p>Purchases are processed by Whop and are subject to Whop's terms and the refund policy shown at checkout. Mentorship spots are limited and reviewed by application.</p>
+      </div>
+      <footer>
+        <div>© <span id="yr"></span> FKFutures. All rights reserved.</div>
+        <nav><a data-link="discord">Discord</a><a href="#p2" data-go="0">Offers</a><a href="#p4" data-go="2">Apply</a><a href="mailto:khawajafaizanahmad@gmail.com">Contact</a></nav>
+      </footer>
+    </div>
+  </section>
+
+</main>
+
+<script>
+/* ======================= 1) EDIT THESE ======================= */
+const CONFIG = {
+  WHOP_WHOLE_THING: 'https://whop.com/checkout/plan_xZJ1J3PynxXtb',
+  WHOP_MENTORSHIP:  'https://whop.com/checkout/plan_g3QVdViyilRdo',
+  DISCORD_INVITE:   'https://discord.gg/J3kkNEJcA9',
+  VIDEO_EMBED_URL:  '',   // e.g. 'https://www.youtube.com/embed/VIDEO_ID?rel=0'  — leave '' to keep the placeholder
+  FORM_ENDPOINT:    'netlify'    // 'netlify' = Netlify Forms (emails you); or a Formspree URL. e.g. 'https://formspree.io/f/abcd1234' — leave '' to skip saving and go straight to checkout
+};
+/* Hall of Fame — exactly 8 boxes. Any box can hold anything:
+   type: 'image'  → a screenshot (src). Stays the box size, no zoom.
+         'video'  → a video file, e.g. an .mp4 you upload (src, optional poster). Plays in the box; a ⤢ button offers full screen.
+         'embed'  → a YouTube / Loom / Vimeo embed URL (src). Plays in the box; ⤢ button offers full screen.
+         'text'   → a quote (text).
+         'placeholder' → shows an icon until you fill it. */
+const HALL_OF_FAME = [
+  { tag:'Payout',    title:'Payout proof #1',                   type:'placeholder', icon:'trophy' },
+  { tag:'Interview', title:'Student interview',                 type:'placeholder', icon:'mic' },
+  { tag:'Discord',   title:'Live trade posted in the Discord',  type:'placeholder', icon:'play' },
+  { tag:'Payout',    title:'Payout proof #2',                   type:'placeholder', icon:'trophy' },
+  { tag:'Review',    title:'Daily trade review',                type:'placeholder', icon:'check' },
+  { tag:'Student',   title:'— student name, funded in month 3', type:'text', text:'Paste a student quote here.' },
+  { tag:'Discord',   title:'Execution System in action',        type:'placeholder', icon:'play' },
+  { tag:'Payout',    title:'Payout proof #3',                   type:'placeholder', icon:'trophy' }
+];
+/* ============================================================= */
+
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+$('#yr').textContent=new Date().getFullYear();
+
+/* ---- wire every link to CONFIG ---- */
+$$('[data-link]').forEach(a=>{
+  const k=a.dataset.link;
+  a.href=k==='discord'?CONFIG.DISCORD_INVITE:k==='whop-whole'?CONFIG.WHOP_WHOLE_THING:CONFIG.WHOP_MENTORSHIP;
+  if(k==='discord'){a.target='_blank';a.rel='noopener'}
+});
+
+/* ---- pager: one scroll = one page ---- */
+const pager=$('#pager'), pages=$$('.page'), dots=$('#dots');
+let cur=0, lock=false, lockT=0, innerT=0;
+pages.forEach((p,i)=>{const b=document.createElement('button');b.type='button';b.setAttribute('aria-label','Page '+(i+1));b.addEventListener('click',()=>goTo(i));dots.appendChild(b)});
+const setDots=()=>$$('button',dots).forEach((b,i)=>b.classList.toggle('on',i===cur));
+function goTo(i,focusSel){
+  i=Math.max(0,Math.min(pages.length-1,i));
+  if(i!==cur){ cur=i; lock=true; clearTimeout(lockT); lockT=setTimeout(()=>lock=false,1100); pager.scrollTo({top:pages[i].offsetTop,behavior:'smooth'}); setDots(); }
+  if(focusSel) setTimeout(()=>{const el=$(focusSel); el&&el.focus({preventScroll:true})},900);
+}
+$$('[data-go]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();goTo(+el.dataset.go,el.dataset.focus)}));
+function scrollable(el){ // nearest inner area that can still scroll (plan lists, legal text, mobile pages)
+  while(el&&el!==pager){
+    if(el.classList&&el.classList.contains('sc')&&el.scrollHeight>el.clientHeight+2&&/auto|scroll/.test(getComputedStyle(el).overflowY)) return el;
+    el=el.parentElement;
+  }
+  return null;
+}
+pager.addEventListener('wheel',e=>{
+  const sc=scrollable(e.target);
+  if(sc){
+    const down=e.deltaY>0, atEnd=down?sc.scrollTop+sc.clientHeight>=sc.scrollHeight-2:sc.scrollTop<=0;
+    if(!atEnd){ innerT=performance.now(); return; }                 // let the inner area scroll natively
+    if(performance.now()-innerT<600){ e.preventDefault(); return; }  // settle before flipping the page
+  }
+  e.preventDefault();
+  if(lock||Math.abs(e.deltaY)<6) return;
+  goTo(cur+(e.deltaY>0?1:-1));
+},{passive:false});
+addEventListener('keydown',e=>{
+  if(/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName)) return;
+  if(['ArrowDown','PageDown',' '].includes(e.key)){e.preventDefault();goTo(cur+1)}
+  else if(['ArrowUp','PageUp'].includes(e.key)){e.preventDefault();goTo(cur-1)}
+});
+const pageIO=new IntersectionObserver(es=>es.forEach(en=>{
+  if(!en.isIntersecting) return;
+  cur=pages.indexOf(en.target); setDots(); en.target.classList.add('on');
+  try{ history.replaceState(null,'','#'+en.target.id); }catch(_){}
+}),{root:pager,threshold:.6});
+pages.forEach(p=>pageIO.observe(p));
+if(location.hash){ const i=pages.findIndex(p=>'#'+p.id===location.hash); if(i>0){ pager.style.scrollBehavior='auto'; pager.scrollTop=pages[i].offsetTop; cur=i; requestAnimationFrame(()=>pager.style.scrollBehavior=''); } }
+setDots();
+
+/* ---- headline: word-by-word cartoon pop ---- */
+(function popWords(h){
+  if(!h) return;            // no headline on this build — skip
+  let i=0;
+  const walk=n=>[...n.childNodes].forEach(c=>{
+    if(c.nodeType!==3){ walk(c); return; }
+    const frag=document.createDocumentFragment();
+    c.textContent.split(/(\s+)/).forEach(tok=>{
+      if(!tok) return;
+      if(/^\s+$/.test(tok)){ frag.appendChild(document.createTextNode(' ')); return; }
+      const s=document.createElement('span'); s.className='w'; s.style.setProperty('--i',i++); s.textContent=tok; frag.appendChild(s);
+    });
+    n.replaceChild(frag,c);
+  });
+  walk(h);
+})($('#headline'));
+
+/* ---- video ---- */
+if(CONFIG.VIDEO_EMBED_URL){
+  $('#video').innerHTML=`<iframe src="${esc(CONFIG.VIDEO_EMBED_URL)}" title="FKFutures breakdown" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>`;
+}
+
+/* ---- hall of fame ---- */
+const ICONS={
+  trophy:'<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"><path d="M14 8h20v10a10 10 0 0 1-20 0z" style="fill:var(--ic1,#FFC857)"/><path d="M14 12H8a6 6 0 0 0 6 8M34 12h6a6 6 0 0 1-6 8"/><path d="M20 34h8v-6h-8zM14 40h20"/></svg>',
+  mic:'<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"><rect x="17" y="6" width="14" height="24" rx="7" style="fill:var(--ic2,#8B5CF6)"/><path d="M10 24a14 14 0 0 0 28 0M24 38v6M16 44h16"/></svg>',
+  play:'<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"><rect x="4" y="10" width="40" height="28" rx="6" style="fill:var(--ic3,#2f8af5)"/><path d="M20 18l12 6-12 6z" style="fill:var(--ic-fg,#fff)"/></svg>',
+  check:'<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"><circle cx="24" cy="24" r="18" style="fill:var(--ic4,#34C77B)"/><path d="M15 25l6 6 12-14" stroke="var(--ic-fg,#fff)" stroke-width="3.5"/></svg>'
+};
+const grid=$('#hofGrid');
+HALL_OF_FAME.slice(0,8).forEach((it,i)=>{
+  const d=document.createElement('article'); d.className='card hof-card rise'; d.style.setProperty('--i',i%4+1);
+  let media='';
+  if(it.type==='image'&&it.src) media=`<img src="${esc(it.src)}" alt="${esc(it.title)}" loading="lazy">`;
+  else if(it.type==='embed'&&it.src) media=`<iframe src="${esc(it.src)}" title="${esc(it.title)}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen loading="lazy"></iframe><button class="fs" type="button" aria-label="Full screen" title="Full screen">⤢</button>`;
+  else if(it.type==='video'&&it.src) media=`<video src="${esc(it.src)}"${it.poster?` poster="${esc(it.poster)}"`:''} controls playsinline preload="metadata"></video><button class="fs" type="button" aria-label="Full screen" title="Full screen">⤢</button>`;
+  else if(it.type==='text') media=`<div class="q">“${esc(it.text||'')}”</div>`;
+  else media=`${ICONS[it.icon]||ICONS.trophy}<div>Drop ${esc(it.tag.toLowerCase())} here</div>`;
+  d.innerHTML=`<div class="tag"><b>#</b>${esc(it.tag)}</div><div class="media">${media}</div><div class="cap">${esc(it.title)}</div>`;
+  grid.appendChild(d);
+});
+grid.addEventListener('click',e=>{ // ⤢ on video boxes only — pictures keep their size
+  const b=e.target.closest('.fs'); if(!b) return;
+  const media=b.closest('.media'), vid=media.querySelector('video');
+  if(vid&&vid.webkitEnterFullscreen&&!media.requestFullscreen){ vid.webkitEnterFullscreen(); return; } // iPhone Safari
+  (media.requestFullscreen||media.webkitRequestFullscreen||function(){}).call(media);
+});
+
+/* ---- application form → save (optional) → Whop mentorship checkout ---- */
+$('#applyForm').addEventListener('submit',async e=>{
+  e.preventDefault(); const f=e.target;
+  if(!f.reportValidity()) return;
+  const btn=$('button[type=submit]',f); btn.disabled=true; btn.textContent='One sec…';
+  const data=Object.fromEntries(new FormData(f).entries()); delete data['form-name']; delete data['bot-field']; data.offer='1-on-1 mentorship'; data.source='fkfutures.com';
+  if(CONFIG.FORM_ENDPOINT){
+    try{
+      if(CONFIG.FORM_ENDPOINT==='netlify'){ const fd=new FormData(f); fd.set('offer',data.offer); fd.set('source',location.hostname);
+        await fetch('/',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(fd).toString()}); }
+      else await fetch(CONFIG.FORM_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(data)});
+    }
+    catch(err){ console.warn('Lead save failed',err); }
+  }
+  window.location.href=CONFIG.WHOP_MENTORSHIP;
+});
+
+</script>
+</body>
+</html>
