@@ -1,0 +1,8 @@
+{
+  "version": "1.1.0",
+  "url": "https://fkfutures.com/download/",
+  "url_mac": "https://fkfutures.com/download/",
+  "notes": "New Progress home page, sidebar + movable toolbox, live trade notifications, rebuilt simulator. ORDER BEHAVIOUR: adds two order modes, Limit 2x and Limit 3x (same entry and stop as Limit, take-profit 2x / 3x the stop distance). Existing modes are unchanged.",
+  "required": false,
+  "sha256": "<sha256 of the installer exe - fill at release>"
+}
