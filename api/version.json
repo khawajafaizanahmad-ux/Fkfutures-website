@@ -1,8 +1,8 @@
 {
-  "version": "1.1.1",
+  "version": "1.1.2",
   "url": "https://fkfutures.com/download/",
   "url_mac": "https://fkfutures.com/download/",
-  "notes": "The app is now called ES (Execution System). On Mac it installs as ES in Applications and shows ES in the menu bar (Open ES / Quit ES). Your settings, accounts and journal stay exactly as they were. No change to trading or order behaviour.",
+  "notes": "The app's name is now ES everywhere: setup, messages and pages. No change to trading or order behaviour.",
   "required": false,
-  "sha256": "a6c95e1d4be53708d09a11f897bfad77446ca15f958c839a0a9dab8345df3ef5"
+  "sha256": "af28bd51a8833ca0566b0d7b2add059aceecbca0c4dbc89b9556e97445d720ac"
 }
