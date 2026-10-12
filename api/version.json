@@ -1,8 +1,8 @@
 {
-  "version": "1.1.0",
+  "version": "1.1.1",
   "url": "https://fkfutures.com/download/",
   "url_mac": "https://fkfutures.com/download/",
-  "notes": "First public release: Statistics, Execution + Copier, Journal (screenshots, videos, Excel import), Cost Tracking, Monte Carlo Simulator,\nphone buttons, live notifications. Windows, Mac (Apple chip) and Mac (Intel). ORDER BEHAVIOUR: adds Limit 2x and Limit 3x modes\n(same entry and stop as Limit, take-profit 2x / 3x the stop distance); existing modes unchanged.",
+  "notes": "The app is now called ES (Execution System). On Mac it installs as ES in Applications and shows ES in the menu bar (Open ES / Quit ES). Your settings, accounts and journal stay exactly as they were. No change to trading or order behaviour.",
   "required": false,
-  "sha256": "74296fbb7d6ce3e9f39728a3298ac833a279b39b32f526571163fb567ab72a89"
+  "sha256": "a6c95e1d4be53708d09a11f897bfad77446ca15f958c839a0a9dab8345df3ef5"
 }
