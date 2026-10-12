@@ -2,7 +2,7 @@
   "version": "1.1.0",
   "url": "https://fkfutures.com/download/",
   "url_mac": "https://fkfutures.com/download/",
-  "notes": "New Progress home page, sidebar + movable toolbox, live trade notifications, rebuilt simulator. ORDER BEHAVIOUR: adds two order modes, Limit 2x and Limit 3x (same entry and stop as Limit, take-profit 2x / 3x the stop distance). Existing modes are unchanged.",
+  "notes": "First public release: Statistics, Execution + Copier, Journal (screenshots, videos, Excel import), Cost Tracking, Monte Carlo Simulator,\nphone buttons, live notifications. Windows, Mac (Apple chip) and Mac (Intel). ORDER BEHAVIOUR: adds Limit 2x and Limit 3x modes\n(same entry and stop as Limit, take-profit 2x / 3x the stop distance); existing modes unchanged.",
   "required": false,
-  "sha256": "<sha256 of the installer exe - fill at release>"
+  "sha256": "74296fbb7d6ce3e9f39728a3298ac833a279b39b32f526571163fb567ab72a89"
 }
